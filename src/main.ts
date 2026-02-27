@@ -24,7 +24,6 @@ async function loadCSV(): Promise<Row[]> {
   const res = await fetch('/subnets.csv')
   const text = await res.text()
   const lines = text.trim().split('\n')
-  const headers = lines[0].split(',')
   return lines.slice(1).map(line => {
     const vals = line.split(',')
     return {
