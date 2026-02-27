@@ -1,0 +1,132 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  background: #0a0a0a;
+  color: #e0e0e0;
+  padding: 2rem;
+}
+
+h1 {
+  font-size: 1.4rem;
+  margin-bottom: 0.5rem;
+  color: #fff;
+}
+
+.subtitle {
+  color: #666;
+  font-size: 0.8rem;
+  margin-bottom: 1.5rem;
+}
+
+.query-section {
+  margin-bottom: 1.5rem;
+}
+
+.query-section textarea {
+  width: 100%;
+  background: #111;
+  color: #0f0;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 0.75rem;
+  font-family: inherit;
+  font-size: 0.85rem;
+  resize: vertical;
+  min-height: 60px;
+}
+
+.query-section textarea:focus {
+  outline: none;
+  border-color: #0f0;
+}
+
+.controls {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  align-items: center;
+}
+
+button {
+  background: #1a1a1a;
+  color: #0f0;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 0.4rem 1rem;
+  font-family: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+button:hover { background: #222; border-color: #0f0; }
+
+.error {
+  color: #f44;
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+}
+
+.stats {
+  color: #666;
+  font-size: 0.75rem;
+}
+
+.filters {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.filter-group label {
+  font-size: 0.7rem;
+  color: #666;
+  text-transform: uppercase;
+}
+
+.filter-group input, .filter-group select {
+  background: #111;
+  color: #e0e0e0;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 0.3rem 0.5rem;
+  font-family: inherit;
+  font-size: 0.8rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+th {
+  text-align: left;
+  padding: 0.5rem;
+  border-bottom: 1px solid #333;
+  color: #888;
+  font-weight: normal;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+th:hover { color: #fff; }
+th.sorted { color: #0f0; }
+
+td {
+  padding: 0.5rem;
+  border-bottom: 1px solid #1a1a1a;
+}
+
+tr:hover td { background: #111; }
+
+.num { text-align: right; font-variant-numeric: tabular-nums; }
