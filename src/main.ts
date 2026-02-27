@@ -4,7 +4,7 @@ import alasql from 'alasql'
 interface Row {
   subnet_uid: number
   subnet_name: string
-  owner_ss58: string
+  owner_uid: number
   alpha_price_tao: number
   tao_emission_per_tempo: number
   alpha_emission_per_tempo: number
@@ -30,7 +30,7 @@ async function loadCSV(): Promise<Row[]> {
     return {
       subnet_uid: parseInt(vals[0]),
       subnet_name: vals[1] || '',
-      owner_ss58: vals[2] || '',
+      owner_uid: parseInt(vals[2]),
       alpha_price_tao: parseFloat(vals[3]),
       tao_emission_per_tempo: parseFloat(vals[4]),
       alpha_emission_per_tempo: parseFloat(vals[5]),
@@ -65,7 +65,7 @@ function renderTable(rows: any[]) {
   }
   const cols = Object.keys(rows[0])
   const numCols = new Set([
-    'subnet_uid', 'alpha_price_tao', 'tao_emission_per_tempo',
+    'subnet_uid', 'owner_uid', 'alpha_price_tao', 'tao_emission_per_tempo',
     'alpha_emission_per_tempo', 'emission_share_pct',
     'top_miner_uid', 'top_miner_incentive'
   ])
@@ -81,9 +81,7 @@ function renderTable(rows: any[]) {
       const v = r[c]
       const isNum = typeof v === 'number'
       let display: string
-      if (c === 'owner_ss58' && typeof v === 'string' && v.length > 12) {
-        display = v.slice(0, 6) + '…' + v.slice(-6)
-      } else if (isNum) {
+      if (isNum) {
         display = Number.isInteger(v) ? String(v) : v.toFixed(6)
       } else {
         display = v
@@ -140,7 +138,7 @@ function setupFilters() {
 
 async function init() {
   data = await loadCSV()
-  alasql('CREATE TABLE data (subnet_uid INT, subnet_name STRING, owner_ss58 STRING, alpha_price_tao FLOAT, tao_emission_per_tempo FLOAT, alpha_emission_per_tempo FLOAT, emission_share_pct FLOAT, top_miner_uid INT, top_miner_incentive FLOAT)')
+  alasql('CREATE TABLE data (subnet_uid INT, subnet_name STRING, owner_uid INT, alpha_price_tao FLOAT, tao_emission_per_tempo FLOAT, alpha_emission_per_tempo FLOAT, emission_share_pct FLOAT, top_miner_uid INT, top_miner_incentive FLOAT)')
   alasql.tables['data'].data = data
 
   document.getElementById('app')!.innerHTML = `
