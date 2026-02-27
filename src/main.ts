@@ -3,8 +3,14 @@ import alasql from 'alasql'
 
 interface Row {
   subnet_uid: number
+  subnet_name: string
+  owner_ss58: string
+  alpha_price_tao: number
+  tao_emission_per_tempo: number
+  alpha_emission_per_tempo: number
+  emission_share_pct: number
   top_miner_uid: number
-  incentive_amount: number
+  top_miner_incentive: number
 }
 
 let data: Row[] = []
@@ -12,10 +18,10 @@ let currentResult: any[] = []
 let sortCol: string | null = null
 let sortAsc = true
 
-const DEFAULT_QUERY = 'SELECT * FROM data ORDER BY incentive_amount DESC'
+const DEFAULT_QUERY = 'SELECT * FROM data ORDER BY alpha_price_tao DESC'
 
 async function loadCSV(): Promise<Row[]> {
-  const res = await fetch('/top_miners.csv')
+  const res = await fetch('/subnets.csv')
   const text = await res.text()
   const lines = text.trim().split('\n')
   const headers = lines[0].split(',')
@@ -23,8 +29,14 @@ async function loadCSV(): Promise<Row[]> {
     const vals = line.split(',')
     return {
       subnet_uid: parseInt(vals[0]),
-      top_miner_uid: parseInt(vals[1]),
-      incentive_amount: parseFloat(vals[2]),
+      subnet_name: vals[1] || '',
+      owner_ss58: vals[2] || '',
+      alpha_price_tao: parseFloat(vals[3]),
+      tao_emission_per_tempo: parseFloat(vals[4]),
+      alpha_emission_per_tempo: parseFloat(vals[5]),
+      emission_share_pct: parseFloat(vals[6]),
+      top_miner_uid: parseInt(vals[7]),
+      top_miner_incentive: parseFloat(vals[8]),
     }
   })
 }
@@ -52,7 +64,11 @@ function renderTable(rows: any[]) {
     return
   }
   const cols = Object.keys(rows[0])
-  const numCols = new Set(['subnet_uid', 'top_miner_uid', 'incentive_amount'])
+  const numCols = new Set([
+    'subnet_uid', 'alpha_price_tao', 'tao_emission_per_tempo',
+    'alpha_emission_per_tempo', 'emission_share_pct',
+    'top_miner_uid', 'top_miner_incentive'
+  ])
 
   const ths = cols.map(c => {
     const cls = [sortCol === c ? 'sorted' : '', numCols.has(c) ? 'num' : ''].filter(Boolean).join(' ')
@@ -64,14 +80,20 @@ function renderTable(rows: any[]) {
     '<tr>' + cols.map(c => {
       const v = r[c]
       const isNum = typeof v === 'number'
-      const display = isNum ? (Number.isInteger(v) ? v : v.toFixed(6)) : v
+      let display: string
+      if (c === 'owner_ss58' && typeof v === 'string' && v.length > 12) {
+        display = v.slice(0, 6) + '…' + v.slice(-6)
+      } else if (isNum) {
+        display = Number.isInteger(v) ? String(v) : v.toFixed(6)
+      } else {
+        display = v
+      }
       return `<td class="${isNum ? 'num' : ''}">${display}</td>`
     }).join('') + '</tr>'
   ).join('')
 
   container.innerHTML = `<table><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table>`
 
-  // sortable headers
   container.querySelectorAll('th').forEach(th => {
     th.addEventListener('click', () => {
       const col = th.dataset.col!
@@ -89,38 +111,41 @@ function renderTable(rows: any[]) {
 }
 
 function setupFilters() {
-  const minInc = document.getElementById('filter-min-inc') as HTMLInputElement
-  const maxInc = document.getElementById('filter-max-inc') as HTMLInputElement
   const subnetFilter = document.getElementById('filter-subnet') as HTMLInputElement
+  const nameFilter = document.getElementById('filter-name') as HTMLInputElement
+  const minPrice = document.getElementById('filter-min-price') as HTMLInputElement
+  const minInc = document.getElementById('filter-min-inc') as HTMLInputElement
 
   const apply = () => {
     let sql = 'SELECT * FROM data WHERE 1=1'
-    const min = parseFloat(minInc.value)
-    const max = parseFloat(maxInc.value)
     const sn = subnetFilter.value.trim()
-    if (!isNaN(min)) sql += ` AND incentive_amount >= ${min}`
-    if (!isNaN(max)) sql += ` AND incentive_amount <= ${max}`
+    const name = nameFilter.value.trim()
+    const mp = parseFloat(minPrice.value)
+    const mi = parseFloat(minInc.value)
     if (sn) sql += ` AND subnet_uid = ${parseInt(sn)}`
-    sql += ' ORDER BY incentive_amount DESC'
+    if (name) sql += ` AND LOWER(subnet_name) LIKE '%${name.toLowerCase()}%'`
+    if (!isNaN(mp)) sql += ` AND alpha_price_tao >= ${mp}`
+    if (!isNaN(mi)) sql += ` AND top_miner_incentive >= ${mi}`
+    sql += ' ORDER BY alpha_price_tao DESC'
     const textarea = document.getElementById('query') as HTMLTextAreaElement
     textarea.value = sql
     runQuery(sql)
   }
 
-  minInc.addEventListener('input', apply)
-  maxInc.addEventListener('input', apply)
   subnetFilter.addEventListener('input', apply)
+  nameFilter.addEventListener('input', apply)
+  minPrice.addEventListener('input', apply)
+  minInc.addEventListener('input', apply)
 }
 
 async function init() {
   data = await loadCSV()
-  // register as alasql table
-  alasql('CREATE TABLE data (subnet_uid INT, top_miner_uid INT, incentive_amount FLOAT)')
+  alasql('CREATE TABLE data (subnet_uid INT, subnet_name STRING, owner_ss58 STRING, alpha_price_tao FLOAT, tao_emission_per_tempo FLOAT, alpha_emission_per_tempo FLOAT, emission_share_pct FLOAT, top_miner_uid INT, top_miner_incentive FLOAT)')
   alasql.tables['data'].data = data
 
   document.getElementById('app')!.innerHTML = `
     <h1>⛏ Metagraph Explorer</h1>
-    <p class="subtitle">${data.length} subnets · top miner by incentive · SQL queries via AlaSQL</p>
+    <p class="subtitle">${data.length} subnets · alpha prices, emissions, top miners · SQL via AlaSQL</p>
 
     <div class="filters">
       <div class="filter-group">
@@ -128,12 +153,16 @@ async function init() {
         <input id="filter-subnet" type="number" placeholder="all" />
       </div>
       <div class="filter-group">
-        <label>Min Incentive</label>
-        <input id="filter-min-inc" type="number" step="0.01" placeholder="0" />
+        <label>Name</label>
+        <input id="filter-name" type="text" placeholder="search..." />
       </div>
       <div class="filter-group">
-        <label>Max Incentive</label>
-        <input id="filter-max-inc" type="number" step="0.01" placeholder="1" />
+        <label>Min Price (TAO)</label>
+        <input id="filter-min-price" type="number" step="0.001" placeholder="0" />
+      </div>
+      <div class="filter-group">
+        <label>Min Incentive</label>
+        <input id="filter-min-inc" type="number" step="0.01" placeholder="0" />
       </div>
     </div>
 
@@ -157,8 +186,9 @@ async function init() {
   document.getElementById('reset-btn')!.addEventListener('click', () => {
     (document.getElementById('query') as HTMLTextAreaElement).value = DEFAULT_QUERY;
     (document.getElementById('filter-subnet') as HTMLInputElement).value = '';
+    (document.getElementById('filter-name') as HTMLInputElement).value = '';
+    (document.getElementById('filter-min-price') as HTMLInputElement).value = '';
     (document.getElementById('filter-min-inc') as HTMLInputElement).value = '';
-    (document.getElementById('filter-max-inc') as HTMLInputElement).value = '';
     runQuery(DEFAULT_QUERY)
   })
 
